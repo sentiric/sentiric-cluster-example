@@ -1,0 +1,15 @@
+{
+  "service": {
+    "name": "sip-signaling",
+    "port": 13024,
+    "tags": ["onprem", "core", "udp"],
+    "checks": [
+      {
+        "name": "SIP Signaling UDP Port Check",
+        "udp": "127.0.0.1:13024",
+        "interval": "10s",
+        "timeout": "5s"
+      }
+    ]
+  }
+}

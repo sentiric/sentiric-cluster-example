@@ -1,0 +1,15 @@
+{
+  "service": {
+    "name": "sip-gateway",
+    "port": 5060,
+    "tags": ["gcp", "udp"],
+    "checks": [
+      {
+        "name": "SIP Gateway UDP Port Check",
+        "udp": "127.0.0.1:5060",
+        "interval": "10s",
+        "timeout": "5s"
+      }
+    ]
+  }
+}
