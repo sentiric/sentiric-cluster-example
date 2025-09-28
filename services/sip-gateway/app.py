@@ -16,12 +16,8 @@ latency_lock = threading.Lock()
 def find_signaling_nodes():
     nodes = {}
     try:
-        # Ortam değişkeninden Consul adresini oku, yoksa varsayılanı kullan
-        consul_api_addr = os.environ.get("CONSUL_HTTP_ADDR", "http://consul-server:8500")
-        
-        consul_url = f"{consul_api_addr}/v1/health/service/sip-signaling?passing"
-        logger.info(f"Querying Consul at: {consul_url}") # <-- Debug için log ekledik
-        
+        # Host modunda olduğumuz için localhost üzerinden Consul'e erişiyoruz
+        consul_url = "http://127.0.0.1:8500/v1/health/service/sip-signaling?passing"
         response = requests.get(consul_url, timeout=2)
         response.raise_for_status()
         service_instances = response.json()
@@ -38,6 +34,7 @@ def latency_prober():
     probe_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     probe_sock.settimeout(1)
     
+    # Kümenin kurulması için başlangıçta biraz bekle
     time.sleep(15) 
     logger.info("Latency prober thread started.")
 

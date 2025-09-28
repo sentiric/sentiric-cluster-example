@@ -4,8 +4,6 @@ services:
     container_name: consul-server
     restart: always
     network_mode: "host"
-    environment:
-      - CONSUL_HTTP_ADDR=http://${NODE_A_IP}:8500    
     volumes:
       - consul_data:/consul/data
       - ./consul-config:/consul/config
