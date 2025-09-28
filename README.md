@@ -1,21 +1,64 @@
 # Sentiric Cluster: Docker Compose ile Dağıtık Servis Keşfi (Modüler Yapı)
 
-Bu repo, `sentiric-discovery` (Consul) imajını kullanarak, birden fazla sunucuya yayılmış yüksek erişilebilir (HA) bir servis kümesinin nasıl kurulacağını gösteren modüler ve bakımı kolay bir başlangıç şablonudur.
+Bu repo, `sentiric-discovery` (Consul) imajını kullanarak, birden fazla sunucuya (node) yayılmış yüksek erişilebilir (HA) bir servis kümesinin nasıl kurulacağını gösteren modüler ve bakımı kolay bir başlangıç şablonudur.
+
+Bu yapı, "Kendini Tekrar Etme" (DRY) prensibine uygun olarak tasarlanmıştır. Tüm servis tanımları merkezi bir yerde tutulurken, her düğüm sadece kendi yapılandırmasını çalıştırır.
+
+## Mimari
+
+- **Düğüm A (GCP):** `sip-gateway` + `sentiric-discovery`
+- **Düğüm B (Antalya Üretim):** `sip-signaling` + `sentiric-discovery`
+- **Düğüm C (Antalya Core):** `sip-signaling` + `sentiric-discovery`
+
+Yapılandırma, `.env` dosyaları aracılığıyla yönetilir, bu da IP adreslerini değiştirmeyi kolaylaştırır.
+
+---
 
 ## Kurulum Adımları
 
-### Adım 1: Repoyu Klonlama ve Ortam Değişkenlerini Ayarlama
+Aşağıdaki adımları kümedeki **her bir sunucuda** sırasıyla uygulayın.
 
-1.  Bu repoyu **her sunucuya** klonlayın:
+### Adım 1: Gerekli Yazılımların Kurulumu
+
+Bu adım, `git`, `docker` ve `docker compose`'un (v2) sunucunuzda kurulu olmasını sağlar.
+
+```bash
+# Sistem paketlerini güncelle
+sudo apt-get update
+
+# Git'i kur
+sudo apt-get install git -y
+
+# Docker ve Docker Compose Plugin'ini kurmak için Docker'ın resmi kurulum betiğini kullanın.
+# Bu en güvenilir yöntemdir.
+curl -fsSL https://get.docker.com -o get-docker.sh
+sudo sh get-docker.sh
+
+# Docker'ı sudo olmadan kullanabilmek için mevcut kullanıcıyı docker grubuna ekleyin.
+sudo usermod -aG docker $USER
+
+# Yaptığınız değişikliğin aktif olması için yeni bir shell'e geçin veya sunucuya yeniden bağlanın.
+# Örnek:
+# newgrp docker
+# VEYA sunucudan çıkıp tekrar SSH ile bağlanın.
+```
+> **Önemli:** `usermod` komutundan sonra değişikliğin etkili olması için terminali kapatıp yeniden açmanız veya sunucuya yeniden bağlanmanız **gereklidir**.
+
+### Adım 2: Repoyu Klonlama ve Yapılandırma
+
+1.  Proje dosyalarını sunucunuza klonlayın:
     ```bash
     git clone https://github.com/sentiric/sentiric-cluster-example.git
     cd sentiric-cluster-example
     ```
-2.  Kök dizindeki `.env.example` dosyasını `.env` olarak kopyalayın:
+2.  Yapılandırma şablonunu kopyalayarak kendi yapılandırma dosyanızı oluşturun:
     ```bash
     cp .env.example .env
     ```
-3.  `.env` dosyasını açın ve **sadece o sunucuya ait** olan `CURRENT_NODE_NAME` ve `CURRENT_NODE_IP` değişkenlerini doldurun. Diğer `NODE_*` değişkenlerinin doğru olduğundan emin olun.
+3.  `.env` dosyasını bir metin editörü ile açın ve **sadece o sunucuya ait** olan `CURRENT_NODE_NAME` ve `CURRENT_NODE_IP` değişkenlerini doldurun. Diğer `NODE_*` değişkenlerinin doğru olduğundan emin olun.
+    ```bash
+    nano .env
+    ```
 
     **Örnek olarak Sunucu A (GCP) için `.env` dosyasının üst kısmı:**
     ```dotenv
@@ -23,26 +66,48 @@ Bu repo, `sentiric-discovery` (Consul) imajını kullanarak, birden fazla sunucu
     CURRENT_NODE_IP=100.107.221.60
     ```
 
-### Adım 2: Düğümleri Başlatma
+### Adım 3: Düğümleri Başlatma
 
-Aşağıdaki komutları ilgili sunucularda çalıştırın. `docker-compose` komutları artık belirli bir düğüm klasöründen değil, **projenin kök dizininden** çalıştırılacak ve hangi `docker-compose.yml` dosyasının kullanılacağı `-f` parametresi ile belirtilecektir.
+Aşağıdaki komutları **ilgili sunucularda** çalıştırın. Komutlar projenin kök dizininden çalıştırılmalıdır.
 
 **Node A (GCP) üzerinde:**
 ```bash
-docker-compose -f node-a/docker-compose.yml up -d --build
+docker compose --env-file .env -f node-a/docker-compose.yml up -d --build
 ```
 
 **Node B (Antalya Prod) üzerinde:**
 ```bash
-docker-compose -f node-b/docker-compose.yml up -d --build
+docker compose --env-file .env -f node-b/docker-compose.yml up -d --build
 ```
 
 **Node C (Antalya Core) üzerinde:**
 ```bash
-docker-compose -f node-c/docker-compose.yml up -d --build
+docker compose --env-file .env -f node-c/docker-compose.yml up -d --build
 ```
 
-### Adım 3: Doğrulama
+### Adım 4: Doğrulama ve Yönetim
 
-Herhangi bir sunucunun IP adresinden Consul arayüzüne erişin: `http://<sunucu_ip>:8500`
-Kümenizin sağlıklı bir şekilde çalıştığını doğrulayın.
+#### Küme Durumunu Kontrol Etme
+Herhangi bir sunucunun PUBLIC IP adresinden (veya VPN üzerinden BACKBONE IP'sinden) Consul arayüzüne erişin: `http://<sunucu_ip>:8500`
+
+- "Nodes" sekmesinde 3 düğümü de (`node-a-gcp`, `node-b-ant-prod`, `node-c-ant-core`) görmelisiniz.
+- "Services" sekmesinde 1 `sip-gateway` ve 2 `sip-signaling` servisi görmelisiniz.
+
+#### Servis Loglarını İzleme
+İlgili sunucuda, çalışan servislerin loglarını görmek için:
+```bash
+# Örnek: Node A'daki servislerin logları
+docker compose -f node-a/docker-compose.yml logs -f
+
+# Sadece belirli bir servisin logunu görmek için (örneğin sip-gateway)
+docker compose -f node-a/docker-compose.yml logs -f sip-gateway
+```
+
+#### Sistemi Durdurma
+İlgili sunucudaki servisleri durdurmak için:
+```bash
+# Örnek: Node A'daki servisleri durdurma
+docker compose -f node-a/docker-compose.yml down
+```
+
+Bu `README` dosyası artık çok daha eksiksiz ve kullanıcı dostu. Sıfırdan bir sunucuya kurulum yapacak birinin bile sorun yaşama ihtimalini en aza indirir.
