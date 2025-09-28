@@ -2,70 +2,113 @@ import socket
 import os
 import requests
 import threading
+import time
+import logging
 import random
 from flask import Flask, jsonify
 
+# --- Profesyonel Loglama Ayarları ---
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger("SIP_GATEWAY")
+
+# --- Paylaşılan Veri Yapıları (Thread-Safe) ---
+latency_data = {}
+latency_lock = threading.Lock()
+
 # --- Consul'den servis bulmak için yardımcı fonksiyon ---
-def find_signaling_services():
-    services = []
+def find_signaling_nodes():
+    nodes = {}
     try:
         consul_url = "http://127.0.0.1:8500/v1/health/service/sip-signaling?passing"
         response = requests.get(consul_url, timeout=2)
         response.raise_for_status()
         service_instances = response.json()
         for instance in service_instances:
+            node_name = instance['Node']['Node']
             addr = instance['Service']['Address'] or instance['Node']['Address']
             port = instance['Service']['Port']
-            services.append((addr, port))
+            nodes[node_name] = (addr, port)
     except Exception as e:
-        print(f"Error querying Consul: {e}")
-    return services
+        logger.error(f"Error querying Consul: {e}")
+    return nodes
 
-# --- Gateway UDP Sunucusu (Gelen çağrıları yönlendirir) ---
+# --- Arka Plan Gecikme Ölçer (Prober) ---
+def latency_prober():
+    probe_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    probe_sock.settimeout(1) # 1 saniye bekle
+    
+    while True:
+        nodes_to_probe = find_signaling_nodes()
+        for node_name, (host, port) in nodes_to_probe.items():
+            try:
+                message = b"LATENCY_PROBE"
+                start_time = time.monotonic()
+                probe_sock.sendto(message, (host, port))
+                probe_sock.recvfrom(1024)
+                end_time = time.monotonic()
+                rtt = (end_time - start_time) * 1000 # milisaniye
+                
+                with latency_lock:
+                    latency_data[node_name] = {'rtt': rtt, 'addr': (host, port)}
+                logger.info(f"Latency probe to {node_name} ({host}:{port}): {rtt:.2f} ms")
+            except socket.timeout:
+                logger.warning(f"Latency probe to {node_name} ({host}:{port}) timed out.")
+                with latency_lock:
+                    if node_name in latency_data:
+                        del latency_data[node_name]
+            except Exception as e:
+                logger.error(f"Error probing {node_name}: {e}")
+        
+        time.sleep(10) # Her 10 saniyede bir ölç
+
+# --- Gateway UDP Sunucusu (Gelen çağrıları en hızlıya yönlendirir) ---
 def start_gateway_server(host, port):
     server_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     server_sock.bind((host, port))
-    print(f"SIP Gateway UDP server listening on {host}:{port}")
+    logger.info(f"SIP Gateway UDP server listening on {host}:{port}")
     
-    # Giden mesajlar için ayrı, geçici bir soket kullanacağız.
     client_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
     while True:
         try:
             data, addr = server_sock.recvfrom(1024)
-            # Sadece dışarıdan gelen (diğer sunuculardan gelmeyen) mesajları işle
-            if addr[0] not in [s[0] for s in find_signaling_services()]:
-                print(f"Received external SIP message from {addr}: {data.decode(errors='ignore')}")
+            logger.info(f"Received SIP message from {addr}: {data.decode(errors='ignore')}")
 
-                targets = find_signaling_services()
-                if not targets:
-                    print("No healthy signaling services found.")
+            with latency_lock:
+                if not latency_data:
+                    logger.warning("No healthy/fast signaling services available.")
                     continue
-
-                chosen_target = random.choice(targets)
-                print(f"Forwarding message to randomly chosen signaler: {chosen_target}")
-                client_sock.sendto(data, chosen_target)
-            else:
-                # Bu, bir signaling sunucusundan gelen bir cevaptır, logla ve görmezden gel.
-                print(f"Received internal response from {addr}, ignoring.")
+                # En düşük RTT'ye sahip olanı bul
+                fastest_node = min(latency_data, key=lambda n: latency_data[n]['rtt'])
+                chosen_target = latency_data[fastest_node]['addr']
+            
+            logger.info(f"Forwarding message to fastest signaler '{fastest_node}' at {chosen_target}")
+            
+            # Orijinal gönderici bilgisini mesaja ekleyerek ilet
+            forward_data = f"{addr[0]}:{addr[1]}|".encode() + data
+            client_sock.sendto(forward_data, chosen_target)
 
         except Exception as e:
-            print(f"Error in gateway UDP loop: {e}")
+            logger.error(f"Error in gateway UDP loop: {e}")
 
 # --- Flask Web Sunucusu (API için) ---
 app = Flask(__name__)
 
 @app.route('/targets')
 def get_targets():
-    """Consul'den şu anki sağlıklı hedefleri gösterir."""
-    targets = find_signaling_services()
-    return jsonify({"healthy_signaling_services": [f"{h}:{p}" for h, p in targets]})
+    """Consul'den şu anki en hızlı hedefleri gecikme süreleriyle gösterir."""
+    with latency_lock:
+        sorted_targets = sorted(latency_data.items(), key=lambda item: item[1]['rtt'])
+    return jsonify({"fastest_targets_by_latency": sorted_targets})
 
 if __name__ == '__main__':
-    udp_port = 5060
-    gateway_thread = threading.Thread(target=start_gateway_server, args=('0.0.0.0', udp_port))
+    prober_thread = threading.Thread(target=latency_prober)
+    prober_thread.daemon = True
+    prober_thread.start()
+
+    gateway_thread = threading.Thread(target=start_gateway_server, args=('0.0.0.0', 5060))
     gateway_thread.daemon = True
     gateway_thread.start()
 
-    http_port = 5061
-    app.run(host='0.0.0.0', port=http_port)
+    logger.info("Starting Flask API server on port 5061")
+    app.run(host='0.0.0.0', port=5061, debug=False)

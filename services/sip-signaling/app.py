@@ -1,21 +1,52 @@
 import socket
+import logging
+
+# --- Profesyonel Loglama Ayarları ---
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger("SIP_SIGNALING")
 
 def start_udp_server(host, port):
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock.bind((host, port))
-    print(f"SIP Signaling UDP server listening on {host}:{port}")
+    logger.info(f"SIP Signaling UDP server listening on {host}:{port}")
     
     while True:
-        data, addr = sock.recvfrom(1024)
-        # Sadece boş olmayan, gerçek mesajlara cevap ver.
-        # Consul'un sağlık kontrolü boş paket gönderir.
-        if data:
-            message = data.decode(errors='ignore')
-            print(f"Received message: '{message}' from {addr}")
-            # Sadece PING mesajı olmayanlara PONG ile cevap ver.
-            if "PONG" not in message.upper():
-                 sock.sendto(b"PONG from signaling", addr)
+        try:
+            data, addr = sock.recvfrom(1024)
+            
+            # Consul'un boş sağlık kontrolü paketlerini sessizce atla
+            if not data:
+                continue
+
+            message_str = data.decode(errors='ignore')
+
+            # Gateway'in gecikme ölçüm paketlerine cevap ver
+            if message_str == "LATENCY_PROBE":
+                sock.sendto(b"PROBE_ACK", addr)
+                continue
+
+            # Gerçek SIP mesajlarını işle
+            logger.info(f"Received forwarded message from gateway {addr}: '{message_str}'")
+
+            # Orijinal gönderici bilgisini ve asıl mesajı ayır
+            # Format: "original_ip:original_port|SIP_PAYLOAD"
+            parts = message_str.split('|', 1)
+            if len(parts) == 2:
+                original_sender_str, sip_payload = parts
+                original_host, original_port_str = original_sender_str.split(':')
+                original_sender_addr = (original_host, int(original_port_str))
+
+                logger.info(f"Processing call: {sip_payload.strip()}")
+                logger.info(f"Sending '200 OK' response back to original caller {original_sender_addr}")
+                
+                # Yanıtı doğrudan orijinal göndericiye gönder
+                response_message = b"SIP/2.0 200 OK - Processed by this server"
+                sock.sendto(response_message, original_sender_addr)
+            else:
+                logger.warning(f"Received malformed message: {message_str}")
+
+        except Exception as e:
+            logger.error(f"Error in signaling UDP loop: {e}")
 
 if __name__ == '__main__':
-    udp_port = 13024
-    start_udp_server('0.0.0.0', udp_port)
+    start_udp_server('0.0.0.0', 13024)
