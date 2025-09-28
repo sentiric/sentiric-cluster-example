@@ -1,3 +1,4 @@
+# node-c/docker-compose.yml
 
 services:
   consul-server:
@@ -7,7 +8,8 @@ services:
     network_mode: "host"
     volumes:
       - consul_data:/consul/data
-      - ./consul-config:/consul/config
+      # BU SATIRIN EKLENDİĞİNDEN EMİN OLUN:
+      - ./consul-config:/consul/config 
     command: >
       agent -server -bootstrap-expect=3 -ui
       -node=${CURRENT_NODE_NAME}
@@ -16,7 +18,7 @@ services:
       -advertise=${CURRENT_NODE_IP}
       -retry-join="${NODE_A_IP}"
       -retry-join="${NODE_B_IP}"
-      -config-dir=/consul/config
+      -config-dir=/consul/config 
 
   sip-signaling:
     build:
