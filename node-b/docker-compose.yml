@@ -41,8 +41,9 @@ services:
     restart: always
     networks:
       - sentiric_net
-    # Bu servisin dışarıya port açmasına gerek yok, sadece cluster içinden erişilecek.
-    # Gateway, Docker ağı üzerinden bu servise erişir.
+    # NİHAİ DÜZELTME: Gateway'in Tailscale üzerinden erişebilmesi için UDP portunu host'a açıyoruz.
+    ports:
+      - "13024:13024/udp"
     environment:
       - SIGNAL_UDP_PORT=13024
     depends_on:
