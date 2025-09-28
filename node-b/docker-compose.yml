@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  consul-server:
+    image: ghcr.io/sentiric/sentiric-discovery:latest
+    container_name: consul-server
+    restart: always
+    network_mode: "host"
+    volumes:
+      - consul_data:/consul/data
+    command: >
+      agent -server -bootstrap-expect=3 -ui
+      -node=${CURRENT_NODE_NAME}
+      -client=0.0.0.0
+      -bind=${CURRENT_NODE_IP}
+      -advertise=${CURRENT_NODE_IP}
+      -retry-join="${NODE_A_IP}"
+      -retry-join="${NODE_C_IP}"
+
+  sip-signaling:
+    build:
+      context: ../services/sip-signaling
+    container_name: sip-signaling
+    restart: always
+    network_mode: "host"
+    environment:
+      - PORT=13024
+    depends_on:
+      - consul-server
+
+  registrator:
+    image: gliderlabs/registrator:latest
+    container_name: registrator
+    restart: always
+    network_mode: "host"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: "consul://${CURRENT_NODE_IP}:8500"
+    depends_on:
+      - sip-signaling
+
+volumes:
+  consul_data:
+    name: "sentiric_consul_data"
