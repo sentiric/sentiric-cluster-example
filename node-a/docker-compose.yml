@@ -3,31 +3,21 @@ services:
     image: ghcr.io/sentiric/sentiric-discovery:latest
     container_name: consul-server
     restart: always
-    networks:
-      sentiric_backbone:
-        ipv4_address: ${NODE_A_IP}
-    ports:
-      - "8500:8500"
-      - "8600:8600/udp"
-      - "8300:8300"
-      - "8301:8301/tcp"
-      - "8301:8301/udp"
+    network_mode: "host"
     volumes:
       - consul_data:/consul/data
       - ./consul-config:/consul/config
     command: >
       agent -server -bootstrap-expect=3 -ui
-      -node=${NODE_A_NAME}
+      -node=${CURRENT_NODE_NAME}
       -client=0.0.0.0
-      -bind=${NODE_A_IP}
-      -advertise=${NODE_A_IP}
+      -bind=${CURRENT_NODE_IP}
+      -advertise=${CURRENT_NODE_IP}
       -retry-join="${NODE_B_IP}"
       -retry-join="${NODE_C_IP}"
       -config-dir=/consul/config
     healthcheck:
-      # Bu check, Consul'un kendi durumunu raporlayıp "serf_lan":"alive"
-      # dediği zaman başarılı olur. Bu, lider seçimi olmasa bile çalışır.
-      test: ["CMD", "curl", "-f", "http://localhost:8500/v1/agent/self"]
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:8500/v1/agent/self"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -37,19 +27,11 @@ services:
       context: ../services/sip-gateway
     container_name: sip-gateway
     restart: always
+    network_mode: "host"
     depends_on:
       consul-server:
         condition: service_healthy
-    networks:
-      - sentiric_backbone
-    ports:
-      - "5060:5060/udp"
-      - "5061:5061/tcp"
 
 volumes:
   consul_data:
     name: "sentiric_consul_data"
-
-networks:
-  sentiric_backbone:
-    external: true

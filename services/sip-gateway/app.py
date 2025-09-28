@@ -7,19 +7,17 @@ import logging
 import random
 from flask import Flask, jsonify
 
-# --- Profesyonel Loglama Ayarları ---
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger("SIP_GATEWAY")
 
-# --- Paylaşılan Veri Yapıları (Thread-Safe) ---
 latency_data = {}
 latency_lock = threading.Lock()
 
 def find_signaling_nodes():
     nodes = {}
     try:
-        # Docker'ın dahili DNS'i ile container adına göre erişim
-        consul_url = "http://consul-server:8500/v1/health/service/sip-signaling?passing"
+        # Host modunda olduğumuz için localhost üzerinden Consul'e erişiyoruz
+        consul_url = "http://127.0.0.1:8500/v1/health/service/sip-signaling?passing"
         response = requests.get(consul_url, timeout=2)
         response.raise_for_status()
         service_instances = response.json()
@@ -36,7 +34,6 @@ def latency_prober():
     probe_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     probe_sock.settimeout(1)
     
-    # Consul hazır olana kadar bekle
     time.sleep(15) 
     logger.info("Latency prober thread started.")
 
@@ -87,7 +84,6 @@ def start_gateway_server(host, port):
             
             forward_data = f"{addr[0]}:{addr[1]}|".encode() + data
             client_sock.sendto(forward_data, chosen_target)
-
         except Exception as e:
             logger.error(f"Error in gateway UDP loop: {e}")
 
