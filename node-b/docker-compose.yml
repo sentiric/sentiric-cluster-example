@@ -1,7 +1,8 @@
 # node-b\docker-compose.yml
 services:
   consul-server:
-    image: hashicorp/consul:1.18
+    build:
+      context: ../consul
     restart: always
     volumes:
       - consul_data:/consul/data
