@@ -72,7 +72,7 @@ Aşağıdaki komutları **ilgili sunucularda** çalıştırın. Komutlar projeni
 
 **Node A (GCP) üzerinde:**
 ```bash
-docker compose --env-file .env -f node-a/docker-compose.yml up -d --build
+docker compose --env-file .env -f node-a/docker-compose.yml up -d --build 
 ```
 
 **Node B (Antalya Prod) üzerinde:**
