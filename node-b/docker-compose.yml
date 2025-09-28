@@ -24,9 +24,11 @@ services:
       -client=0.0.0.0
       -bind=0.0.0.0
       -advertise='${CURRENT_NODE_IP}'
+      -disable-host-node-id
       -retry-join='${NODE_A_IP}'
       -retry-join='${NODE_C_IP}'
       -config-dir=/consul/config
+      -hcl "disable_udp = true"
     healthcheck:
       # Healthcheck'i daha güvenilir olan `status/leader` endpoint'ine yapıyoruz.
       test: ["CMD", "curl", "-f", "http://127.0.0.1:8500/v1/status/leader"]
