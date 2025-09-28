@@ -1,4 +1,6 @@
 {
   "enable_local_script_checks": true,
-  "disable_udp": true
+  "ports": {
+    "serf_lan": -1
+  }
 }
