@@ -6,7 +6,7 @@
     "checks": [
       {
         "name": "SIP Gateway UDP Port Check",
-        "udp": "127.0.0.1:5060",
+        "args": ["/bin/sh", "-c", "echo 'HEALTH' | nc -u -w 2 sip-gateway 5060"],
         "interval": "10s",
         "timeout": "5s"
       }

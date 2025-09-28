@@ -1,23 +1,30 @@
+# DEĞİŞTİ: Tamamen yeniden yapılandırıldı. node-a ile tutarlı hale getirildi.
+version: '3.8'
+
 services:
   consul-server:
-    image: ghcr.io/sentiric/sentiric-discovery:latest
-    container_name: consul-server
+    image: hashicorp/consul:1.18
     restart: always
-    network_mode: "host"
     volumes:
       - consul_data:/consul/data
       - ./consul-config:/consul/config
+    networks:
+      - sentiric_net
+    ports:
+      - "8500:8500"
+      - "8600:8600/tcp"
+      - "8600:8600/udp"
     command: >
       agent -server -bootstrap-expect=3 -ui
       -node=${CURRENT_NODE_NAME}
       -client=0.0.0.0
-      -bind=${CURRENT_NODE_IP}
-      -advertise=${CURRENT_NODE_IP}
-      -retry-join="${NODE_A_IP}"
-      -retry-join="${NODE_B_IP}"
+      -bind='${CURRENT_NODE_IP}'
+      -advertise='${CURRENT_NODE_IP}'
+      -retry-join='${NODE_A_IP}'
+      -retry-join='${NODE_B_IP}' # node-c'de bu satırı -retry-join='${NODE_B_IP}' yapın
       -config-dir=/consul/config
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://127.0.0.1:8500/v1/agent/self"]
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:8500/v1/status/leader"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -25,9 +32,13 @@ services:
   sip-signaling:
     build:
       context: ../services/sip-signaling
-    container_name: sip-signaling
     restart: always
-    network_mode: "host"
+    networks:
+      - sentiric_net
+    # Bu servisin dışarıya port açmasına gerek yok, sadece cluster içinden erişilecek.
+    # Gateway, Docker ağı üzerinden bu servise erişir.
+    environment:
+      - SIGNAL_UDP_PORT=13024
     depends_on:
       consul-server:
         condition: service_healthy
@@ -35,3 +46,7 @@ services:
 volumes:
   consul_data:
     name: "sentiric_consul_data"
+
+networks:
+  sentiric_net:
+    driver: bridge
