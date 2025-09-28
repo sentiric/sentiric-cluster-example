@@ -1,3 +1,4 @@
+# node-b/docker-compose.yml
 
 services:
   consul-server:

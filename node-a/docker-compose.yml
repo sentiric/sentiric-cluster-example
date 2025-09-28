@@ -1,3 +1,4 @@
+# node-a/docker-compose.yml
 
 services:
   consul-server:
@@ -24,6 +25,8 @@ services:
     container_name: sip-gateway
     restart: always
     network_mode: "host"
+    environment:
+      - PORT=5060    
     depends_on:
       - consul-server
 

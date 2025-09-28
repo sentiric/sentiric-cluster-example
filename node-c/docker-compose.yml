@@ -8,7 +8,6 @@ services:
     network_mode: "host"
     volumes:
       - consul_data:/consul/data
-      # BU SATIRIN EKLENDİĞİNDEN EMİN OLUN:
       - ./consul-config:/consul/config 
     command: >
       agent -server -bootstrap-expect=3 -ui
