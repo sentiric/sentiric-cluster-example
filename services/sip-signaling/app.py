@@ -1,12 +1,17 @@
-from flask import Flask
+import socket
 import os
 
-app = Flask(__name__)
-port = int(os.environ.get("PORT", 13024))
-
-@app.route('/')
-def signaling():
-    return f"SIP Signaling running on port {port}\n"
+def start_udp_server(host, port):
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    sock.bind((host, port))
+    print(f"UDP server listening for pings and health checks on {host}:{port}")
+    
+    while True:
+        data, addr = sock.recvfrom(1024)
+        print(f"Received message: {data.decode()} from {addr}")
+        # Gelen ping'e pong ile cevap ver (opsiyonel)
+        sock.sendto(b"PONG", addr)
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=port)
+    udp_port = int(os.environ.get("UDP_PORT", 13024))
+    start_udp_server('0.0.0.0', udp_port)
