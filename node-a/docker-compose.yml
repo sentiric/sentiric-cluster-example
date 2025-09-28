@@ -27,7 +27,7 @@ services:
       - consul-server
 
   registrator:
-    image: autodock/consul-registrator:latest
+    image: gliderlabs/registrator:latest
     container_name: registrator
     restart: always
     network_mode: "host"
