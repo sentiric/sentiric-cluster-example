@@ -96,11 +96,9 @@ Herhangi bir sunucunun PUBLIC IP adresinden (veya VPN üzerinden BACKBONE IP'sin
 #### Servis Loglarını İzleme
 İlgili sunucuda, çalışan servislerin loglarını görmek için:
 ```bash
-# Örnek: Node A'daki servislerin logları
-docker compose -f node-a/docker-compose.yml logs -f
-
-# Sadece belirli bir servisin logunu görmek için (örneğin sip-gateway)
-docker compose -f node-a/docker-compose.yml logs -f sip-gateway
+docker compose --env-file .env -f node-a/docker-compose.yml logs -f
+docker compose --env-file .env -f node-b/docker-compose.yml logs -f
+docker compose --env-file .env -f node-c/docker-compose.yml logs -f
 ```
 
 #### Sistemi Durdurma
