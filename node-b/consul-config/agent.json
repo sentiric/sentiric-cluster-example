@@ -1,6 +1,3 @@
 {
-  "enable_local_script_checks": true,
-  "ports": {
-    "serf_lan": -1
-  }
+  "enable_local_script_checks": true
 }
