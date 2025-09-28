@@ -22,10 +22,12 @@ services:
       -retry-join="${NODE_C_IP}"
       -config-dir=/consul/config
     healthcheck:
-      test: ["CMD", "consul", "operator", "raft", "list-peers"]
-      interval: 5s
-      timeout: 3s
-      retries: 12
+      # Bu check, Consul'un kendi durumunu raporlayıp "serf_lan":"alive"
+      # dediği zaman başarılı olur. Bu, lider seçimi olmasa bile çalışır.
+      test: ["CMD", "curl", "-f", "http://localhost:8500/v1/agent/self"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   sip-gateway:
     build:

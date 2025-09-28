@@ -46,7 +46,7 @@ sudo usermod -aG docker $USER
 
 > **Ortak Docker Ağını Oluşturun:**
     ```bash
-    docker network create --driver=bridge --subnet=100.64.0.0/16 --gateway=100.64.0.1 sentiric_backbone
+    docker network create --driver=bridge --subnet=100.0.0.0/8 --gateway=100.0.0.1 sentiric_backbone
     ```
 
 ### Adım 2: Repoyu Klonlama ve Yapılandırma
