@@ -9,23 +9,29 @@ services:
     networks:
       - sentiric_net
     ports:
-      - "8500:8500"
-      - "8600:8600/tcp"
-      - "8600:8600/udp"
+      # DÜZELTME 1: Diğer nodeların cluster kurabilmesi için gerekli portları açıyoruz.
+      # Bu portlar Tailscale ağı üzerinden iletişimi sağlayacak.
+      - "8300:8300"      # Server RPC
+      - "8301:8301/tcp"  # Serf LAN Gossip
+      - "8301:8301/udp"  # Serf LAN Gossip
+      - "8500:8500"      # UI / HTTP API
+      - "8600:8600/tcp"  # DNS
+      - "8600:8600/udp"  # DNS
     command: >
       agent -server -bootstrap-expect=3 -ui
       -node=${CURRENT_NODE_NAME}
       -client=0.0.0.0
-      -bind='${CURRENT_NODE_IP}'
+      -bind=0.0.0.0
       -advertise='${CURRENT_NODE_IP}'
       -retry-join='${NODE_A_IP}'
       -retry-join='${NODE_C_IP}'
       -config-dir=/consul/config
     healthcheck:
+      # Healthcheck'i daha güvenilir olan `status/leader` endpoint'ine yapıyoruz.
       test: ["CMD", "curl", "-f", "http://127.0.0.1:8500/v1/status/leader"]
       interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 10 # İlk başlangıç için retries sayısını artırmak iyi bir fikirdir.
 
   sip-signaling:
     build:
