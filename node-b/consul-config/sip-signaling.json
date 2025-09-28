@@ -2,7 +2,7 @@
   "service": {
     "name": "sip-signaling",
     "port": 13024,
-    "tags": ["onprem", "core", "udp"],
+    "tags": ["onprem", "prod", "udp"],
     "checks": [
       {
         "name": "SIP Signaling UDP Port Check",
