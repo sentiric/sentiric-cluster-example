@@ -1,7 +1,6 @@
 import socket
 import logging
 
-# --- Profesyonel Loglama Ayarları ---
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger("SIP_SIGNALING")
 
@@ -14,22 +13,17 @@ def start_udp_server(host, port):
         try:
             data, addr = sock.recvfrom(1024)
             
-            # Consul'un boş sağlık kontrolü paketlerini sessizce atla
             if not data:
                 continue
 
             message_str = data.decode(errors='ignore')
 
-            # Gateway'in gecikme ölçüm paketlerine cevap ver
             if message_str == "LATENCY_PROBE":
                 sock.sendto(b"PROBE_ACK", addr)
                 continue
 
-            # Gerçek SIP mesajlarını işle
             logger.info(f"Received forwarded message from gateway {addr}: '{message_str}'")
 
-            # Orijinal gönderici bilgisini ve asıl mesajı ayır
-            # Format: "original_ip:original_port|SIP_PAYLOAD"
             parts = message_str.split('|', 1)
             if len(parts) == 2:
                 original_sender_str, sip_payload = parts
@@ -39,7 +33,6 @@ def start_udp_server(host, port):
                 logger.info(f"Processing call: {sip_payload.strip()}")
                 logger.info(f"Sending '200 OK' response back to original caller {original_sender_addr}")
                 
-                # Yanıtı doğrudan orijinal göndericiye gönder
                 response_message = b"SIP/2.0 200 OK - Processed by this server"
                 sock.sendto(response_message, original_sender_addr)
             else:

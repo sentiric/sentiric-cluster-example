@@ -44,6 +44,11 @@ sudo usermod -aG docker $USER
 ```
 > **Önemli:** `usermod` komutundan sonra değişikliğin etkili olması için terminali kapatıp yeniden açmanız veya sunucuya yeniden bağlanmanız **gereklidir**.
 
+> **Ortak Docker Ağını Oluşturun:**
+    ```bash
+    docker network create --driver=bridge --subnet=100.64.0.0/16 --gateway=100.64.0.1 sentiric_backbone
+    ```
+
 ### Adım 2: Repoyu Klonlama ve Yapılandırma
 
 1.  Proje dosyalarını sunucunuza klonlayın:
@@ -107,5 +112,25 @@ docker compose --env-file .env -f node-c/docker-compose.yml logs -f
 # Örnek: Node A'daki servisleri durdurma
 docker compose -f node-a/docker-compose.yml down
 ```
+---
+
+## Profesyonel Test ve Doğrulama
+
+1.  **Üç terminal açın:**
+    - **Terminal 1 (Gateway):** `node-a`'ya bağlanın ve `docker compose -f node-a/docker-compose.yml logs -f` komutunu çalıştırın.
+    - **Terminal 2 (Signaler 1):** `node-b`'ye bağlanın ve `docker compose -f node-b/docker-compose.yml logs -f sip-signaling` komutunu çalıştırın.
+    - **Terminal 3 (Signaler 2):** `node-c`'ye bağlanın ve `docker compose -f node-c/docker-compose.yml logs -f sip-signaling` komutunu çalıştırın.
+
+2.  **Dördüncü bir terminalden SIP çağrısını gönderin:**
+    `nc -u -w 2 -p 5080 <NODE_A_PUBLIC_IP> 5060`
+    Komutu yazdıktan sonra SIP mesajınızı girin ve Enter'a basın:
+    `REGISTER sip:test@sentiric.cloud SIP/2.0`
+
+3.  **Sonuçları Gözlemleyin:**
+    - **Gateway Logları:** Çağrının geldiğini ve en hızlı `signaler`'a yönlendirildiğini göreceksiniz.
+    - **Signaler Logları:** Çağrının gittiği sunucuda, mesajın işlendiğini ve cevabın gönderildiğini göreceksiniz.
+    - **Çağrı Yapan Terminal:** `SIP/2.0 200 OK...` cevabını alacaksınız.
+    - **Consul UI:** `http://<NODE_A_PUBLIC_IP>:8500` adresinde tüm servisler yeşil görünecek.
+
 
 Bu `README` dosyası artık çok daha eksiksiz ve kullanıcı dostu. Sıfırdan bir sunucuya kurulum yapacak birinin bile sorun yaşama ihtimalini en aza indirir.

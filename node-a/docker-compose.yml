@@ -1,35 +1,50 @@
-# node-a/docker-compose.yml
-
 services:
   consul-server:
     image: ghcr.io/sentiric/sentiric-discovery:latest
     container_name: consul-server
     restart: always
-    network_mode: "host"
+    networks:
+      sentiric_backbone:
+        ipv4_address: ${NODE_A_IP}
+    ports:
+      - "8500:8500"
+      - "8600:8600/udp"
     volumes:
       - consul_data:/consul/data
       - ./consul-config:/consul/config
     command: >
       agent -server -bootstrap-expect=3 -ui
-      -node=${CURRENT_NODE_NAME}
+      -node=${NODE_A_NAME}
       -client=0.0.0.0
-      -bind=${CURRENT_NODE_IP}
-      -advertise=${CURRENT_NODE_IP}
+      -bind=${NODE_A_IP}
+      -advertise=${NODE_A_IP}
       -retry-join="${NODE_B_IP}"
       -retry-join="${NODE_C_IP}"
       -config-dir=/consul/config
+    healthcheck:
+      test: ["CMD", "consul", "operator", "raft", "list-peers"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
 
   sip-gateway:
     build:
       context: ../services/sip-gateway
     container_name: sip-gateway
     restart: always
-    network_mode: "host"
-    environment:
-      - PORT=5060    
     depends_on:
-      - consul-server
+      consul-server:
+        condition: service_healthy
+    networks:
+      - sentiric_backbone
+    ports:
+      - "5060:5060/udp"
+      - "5061:5061/tcp"
 
 volumes:
   consul_data:
     name: "sentiric_consul_data"
+
+networks:
+  sentiric_backbone:
+    external: true

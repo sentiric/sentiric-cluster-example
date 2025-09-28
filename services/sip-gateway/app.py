@@ -15,28 +15,31 @@ logger = logging.getLogger("SIP_GATEWAY")
 latency_data = {}
 latency_lock = threading.Lock()
 
-# --- Consul'den servis bulmak için yardımcı fonksiyon ---
 def find_signaling_nodes():
     nodes = {}
     try:
-        consul_url = "http://127.0.0.1:8500/v1/health/service/sip-signaling?passing"
+        # Docker'ın dahili DNS'i ile container adına göre erişim
+        consul_url = "http://consul-server:8500/v1/health/service/sip-signaling?passing"
         response = requests.get(consul_url, timeout=2)
         response.raise_for_status()
         service_instances = response.json()
         for instance in service_instances:
             node_name = instance['Node']['Node']
-            addr = instance['Service']['Address'] or instance['Node']['Address']
+            addr = instance['Node']['Address']
             port = instance['Service']['Port']
             nodes[node_name] = (addr, port)
     except Exception as e:
         logger.error(f"Error querying Consul: {e}")
     return nodes
 
-# --- Arka Plan Gecikme Ölçer (Prober) ---
 def latency_prober():
     probe_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    probe_sock.settimeout(1) # 1 saniye bekle
+    probe_sock.settimeout(1)
     
+    # Consul hazır olana kadar bekle
+    time.sleep(15) 
+    logger.info("Latency prober thread started.")
+
     while True:
         nodes_to_probe = find_signaling_nodes()
         for node_name, (host, port) in nodes_to_probe.items():
@@ -46,7 +49,7 @@ def latency_prober():
                 probe_sock.sendto(message, (host, port))
                 probe_sock.recvfrom(1024)
                 end_time = time.monotonic()
-                rtt = (end_time - start_time) * 1000 # milisaniye
+                rtt = (end_time - start_time) * 1000
                 
                 with latency_lock:
                     latency_data[node_name] = {'rtt': rtt, 'addr': (host, port)}
@@ -59,9 +62,8 @@ def latency_prober():
             except Exception as e:
                 logger.error(f"Error probing {node_name}: {e}")
         
-        time.sleep(10) # Her 10 saniyede bir ölç
+        time.sleep(10)
 
-# --- Gateway UDP Sunucusu (Gelen çağrıları en hızlıya yönlendirir) ---
 def start_gateway_server(host, port):
     server_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     server_sock.bind((host, port))
@@ -76,27 +78,23 @@ def start_gateway_server(host, port):
 
             with latency_lock:
                 if not latency_data:
-                    logger.warning("No healthy/fast signaling services available.")
+                    logger.warning("No healthy/fast signaling services available to forward message.")
                     continue
-                # En düşük RTT'ye sahip olanı bul
                 fastest_node = min(latency_data, key=lambda n: latency_data[n]['rtt'])
                 chosen_target = latency_data[fastest_node]['addr']
             
             logger.info(f"Forwarding message to fastest signaler '{fastest_node}' at {chosen_target}")
             
-            # Orijinal gönderici bilgisini mesaja ekleyerek ilet
             forward_data = f"{addr[0]}:{addr[1]}|".encode() + data
             client_sock.sendto(forward_data, chosen_target)
 
         except Exception as e:
             logger.error(f"Error in gateway UDP loop: {e}")
 
-# --- Flask Web Sunucusu (API için) ---
 app = Flask(__name__)
 
 @app.route('/targets')
 def get_targets():
-    """Consul'den şu anki en hızlı hedefleri gecikme süreleriyle gösterir."""
     with latency_lock:
         sorted_targets = sorted(latency_data.items(), key=lambda item: item[1]['rtt'])
     return jsonify({"fastest_targets_by_latency": sorted_targets})
