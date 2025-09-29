@@ -53,9 +53,9 @@ services:
           cpus: '0.25'
     restart: always
     healthcheck:
-      # Healthcheck'i, sunucunun kendi sağlığını kontrol eden ve daha hızlı yanıt veren
-      # /v1/status/peers endpoint'ine yapıyoruz. Bu, lider seçilmeden önce de çalışır.
-      test: [ "CMD", "sh", "-c", "curl -sf http://127.0.0.1:8500/v1/status/peers | jq -e '. | length > 0'" ]
+      # Sadece Consul agent'ının ayakta ve API'sinin cevap verir durumda olduğunu
+      # kontrol ediyoruz. Bu, küme kurulmadan veya lider seçilmeden önce de çalışır.
+      test: ["CMD", "curl", "-sf", "http://127.0.0.1:8500/v1/agent/self"]
       interval: 10s
       timeout: 5s
       retries: 10
