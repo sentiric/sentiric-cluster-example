@@ -13,8 +13,8 @@ app.logger.disabled = True
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger("SIP_SIGNALING")
 
-SIGNALING_PORT = int(os.getenv("SIGNAL_UDP_PORT", 13024))
-HEALTH_PORT = int(os.getenv("HEALTH_API_PORT", 8080))
+SIP_SIGNALING_UDP_PORT = int(os.getenv("SIP_SIGNALING_UDP_PORT", 13024))
+SIP_SIGNALING_HTTP_PORT = int(os.getenv("SIP_SIGNALING_HTTP_PORT", 13020))
 
 def start_udp_server(host, port):
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -63,11 +63,11 @@ def health_check():
     return jsonify({"status": "healthy"}), 200
 
 def run_health_api():
-    logger.info(f"Health check API server starting on port {HEALTH_PORT}")
-    app.run(host='0.0.0.0', port=HEALTH_PORT)
+    logger.info(f"Health check API server starting on port {SIP_SIGNALING_HTTP_PORT}")
+    app.run(host='0.0.0.0', port=SIP_SIGNALING_HTTP_PORT)
 
 if __name__ == '__main__':
-    udp_thread = threading.Thread(target=start_udp_server, args=('0.0.0.0', SIGNALING_PORT), daemon=True)
+    udp_thread = threading.Thread(target=start_udp_server, args=('0.0.0.0', SIP_SIGNALING_UDP_PORT), daemon=True)
     health_thread = threading.Thread(target=run_health_api, daemon=True)
 
     udp_thread.start()

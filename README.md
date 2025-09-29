@@ -66,19 +66,22 @@ Aşağıdaki adımları kümedeki **her bir sunucuda** sırasıyla uygulayın.
     ```
     **Örnek olarak Sunucu A (GCP) için `.env` dosyası:**
     ```dotenv
-    # BU DÜĞÜMÜN TANIMLAMASI
-    CURRENT_NODE_NAME=node-a-gcp
-    CURRENT_NODE_IP=100.101.102.103 # Node A'nın TAILSCALE IP'si
+    DATACENTER_NAME="sentiric"
 
-    # KÜMEDEKİ TÜM DÜĞÜMLERİN TAILSCALE IP BİLGİLERİ
-    NODE_A_NAME=node-a-gcp
-    NODE_A_IP=100.101.102.103 # Node A'nın TAILSCALE IP'si
+    # --- BÖLGE TANIMLARI (Tüm Platformun Fiziksel Haritası) ---
 
-    NODE_B_NAME=node-b-ant-prod
-    NODE_B_IP=100.101.102.104 # Node B'nin TAILSCALE IP'si
+    # Bölge A
+    ZONE_A_HOSTNAME="node-a" 
+    ZONE_A_BACKBONE_IP="100.107.221.60"
+    ZONE_A_PUBLIC_IP="34.122.40.122"
 
-    NODE_C_NAME=node-c-ant-core
-    NODE_C_IP=100.101.102.105 # Node C'nin TAILSCALE IP'si
+    # Bölge B
+    ZONE_B_HOSTNAME="nobe-b"
+    ZONE_B_BACKBONE_IP="100.93.43.53"
+
+    # Bölge C
+    ZONE_C_HOSTNAME="node-c"
+    ZONE_C_BACKBONE_IP="100.122.101.101"
     ```
     > Bu `.env` dosyasını **tüm sunucularda aynı olacak şekilde** hazırlayabilir ve sadece `CURRENT_NODE_*` kısımlarını her sunucuda o sunucuya özel olacak şekilde değiştirebilirsiniz.
 
@@ -86,19 +89,22 @@ Aşağıdaki adımları kümedeki **her bir sunucuda** sırasıyla uygulayın.
 
 Komutları projenin kök dizininden, **ilgili sunucularda** çalıştırın.
 
-**Node A (GCP) üzerinde:**
+**Node A üzerinde:**
 ```bash
-docker compose --env-file .env -f node-a/docker-compose.yml up -d --build 
+docker compose --env-file .env -f docker-compose.node.a.yml up -d --build
+docker compose --env-file .env -f docker-compose.node.a.yml logs -f 
 ```
 
-**Node B (Antalya Prod) üzerinde:**
+**Node B üzerinde:**
 ```bash
-docker compose --env-file .env -f node-b/docker-compose.yml up -d --build
+docker compose --env-file .env -f docker-compose.node.b.yml up -d --build
+docker compose --env-file .env -f docker-compose.node.b.yml logs -f 
 ```
 
-**Node C (Antalya Core) üzerinde:**
+**Node C üzerinde:**
 ```bash
-docker compose --env-file .env -f node-c/docker-compose.yml up -d --build
+docker compose --env-file .env -f docker-compose.node.c.yml up -d --build
+docker compose --env-file .env -f docker-compose.node.c.yml logs -f 
 ```
 
 ### Adım 4: Doğrulama ve Yönetim
@@ -106,7 +112,7 @@ docker compose --env-file .env -f node-c/docker-compose.yml up -d --build
 #### Küme Durumunu Kontrol Etme
 Herhangi bir sunucunun **PUBLIC IP** adresinden veya **TAILSCALE IP** adresinden Consul arayüzüne erişin: `http://<sunucu_ip>:8500`
 
--   Arayüzde 3 düğümün de (`node-a-gcp`, `node-b-ant-prod`, `node-c-ant-core`) sağlıklı (`alive`) olduğunu görmelisiniz.
+-   Arayüzde 3 düğümün de (`zone-a`, `zone-b`, `zone-c`) sağlıklı (`alive`) olduğunu görmelisiniz.
 -   "Services" sekmesinde 1 adet `sip-gateway` ve 2 adet `sip-signaling` servisi yeşil (`passing`) olarak görünmelidir.
 
 #### Gerçek Zamanlı Test
@@ -128,6 +134,6 @@ Herhangi bir sunucunun **PUBLIC IP** adresinden veya **TAILSCALE IP** adresinden
 #### Sistemi Durdurma
 İlgili sunucudaki servisleri durdurmak için:
 ```bash
-# Örnek: Node A'daki servisleri durdurma
-docker compose -f node-a/docker-compose.yml down
+# Örnek: Node C'daki servisleri durdurma
+docker compose -f docker-compose.node.c.yml down
 ```

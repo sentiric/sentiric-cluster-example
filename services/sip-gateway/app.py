@@ -15,9 +15,9 @@ app.logger.disabled = True
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger("SIP_GATEWAY")
 
-GATEWAY_UDP_PORT = int(os.getenv("GW_UDP_PORT", 5060))
-GATEWAY_API_PORT = int(os.getenv("GW_API_PORT", 8080))
-CONSUL_URL = os.getenv("CONSUL_HTTP_ADDR", "http://127.0.0.1:8500")
+SIP_GATEWAY_UDP_PORT = int(os.getenv("SIP_GATEWAY_UDP_PORT", 5060))
+SIP_GATEWAY_HTTP_PORT = int(os.getenv("SIP_GATEWAY_HTTP_PORT", 13010))
+DISCOVERY_SERVICE_HTTP_ADDRESS = os.getenv("DISCOVERY_SERVICE_HTTP_ADDRESS", "http://127.0.0.1:8500")
 
 latency_data = {}
 latency_lock = threading.Lock()
@@ -25,7 +25,7 @@ latency_lock = threading.Lock()
 def find_signaling_nodes():
     nodes = {}
     try:
-        service_url = f"{CONSUL_URL}/v1/health/service/sip-signaling?passing"
+        service_url = f"{DISCOVERY_SERVICE_HTTP_ADDRESS}/v1/health/service/sip-signaling?passing"
         response = requests.get(service_url, timeout=2)
         response.raise_for_status()
         
@@ -114,8 +114,8 @@ if __name__ == '__main__':
     prober_thread = threading.Thread(target=latency_prober, daemon=True)
     prober_thread.start()
 
-    gateway_thread = threading.Thread(target=start_gateway_server, args=('0.0.0.0', GATEWAY_UDP_PORT), daemon=True)
+    gateway_thread = threading.Thread(target=start_gateway_server, args=('0.0.0.0', SIP_GATEWAY_UDP_PORT), daemon=True)
     gateway_thread.start()
 
-    logger.info(f"Starting Flask API server on port {GATEWAY_API_PORT}")
-    app.run(host='0.0.0.0', port=GATEWAY_API_PORT)
+    logger.info(f"Starting Flask API server on port {SIP_GATEWAY_HTTP_PORT}")
+    app.run(host='0.0.0.0', port=SIP_GATEWAY_HTTP_PORT)

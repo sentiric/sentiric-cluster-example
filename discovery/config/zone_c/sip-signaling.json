@@ -2,11 +2,17 @@
   "service": {
     "name": "sip-signaling",
     "port": 13024,
-    "tags": ["onprem", "prod", "udp"],
+    "tags": [
+      "zone_c",
+      "capability",
+      "telephony",
+      "sip",
+      "realtime"
+    ],
     "checks": [
       {
         "name": "SIP Signaling HTTP Health Check",
-        "http": "http://sip-signaling:8080/health",
+        "http": "http://sip-signaling:13020/health",
         "method": "GET",
         "interval": "10s",
         "timeout": "5s"

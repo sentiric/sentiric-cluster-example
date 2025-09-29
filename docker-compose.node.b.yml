@@ -1,0 +1,84 @@
+# docker-compose.zone_b.yml
+
+networks:
+  sentiric-net:
+    name: "${NETWORK_NAME:-sentiric-net}"
+    driver: bridge
+    ipam:
+      config:
+        - subnet: ${NETWORK_SUBNET}
+          gateway: ${NETWORK_GATEWAY}
+
+volumes:
+  # [backbone]: Omurga Servisleri (Backbone Layer)
+  # --------------------------------------------------
+  discovery_data:
+
+
+services:
+  discovery-service:
+    image: ghcr.io/sentiric/sentiric-discovery:latest
+    volumes:
+      - discovery_data:/consul/data
+      - ./discovery/config/zone_b:/consul/config
+    ports:
+      # Bu portlar Tailscale ağı üzerinden iletişimi sağlayacak.
+      - "${DISCOVERY_SERVICE_RPC_PORT:-8300}:${DISCOVERY_SERVICE_RPC_PORT:-8300}" # Server RPC (Remote Procedure Call) portudur.
+      - "${DISCOVERY_SERVICE_LAN_PORT:-8301}:${DISCOVERY_SERVICE_LAN_PORT:-8301}/tcp" # Küme içi Agent iletişimi (Gossip - LAN) (TCP)
+      - "${DISCOVERY_SERVICE_LAN_PORT:-8301}:${DISCOVERY_SERVICE_LAN_PORT:-8301}/udp" # Küme içi Agent iletişimi (Gossip - LAN) (UDP)
+      - "${DISCOVERY_SERVICE_WAN_PORT:-8302}:${DISCOVERY_SERVICE_WAN_PORT:-8302}/tcp" # Veri merkezleri arası Sunucu iletişimi (Gossip - WAN) (TCP)
+      - "${DISCOVERY_SERVICE_WAN_PORT:-8302}:${DISCOVERY_SERVICE_WAN_PORT:-8302}/udp" # Veri merkezleri arası Sunucu iletişimi (Gossip - WAN) (UDP)
+      - "${DISCOVERY_SERVICE_HTTP_PORT:-8500}:8500" # Discovery UI & HTTP API
+      - "${DISCOVERY_SERVICE_DNS_PORT:-8600}:8600/tcp" # Discovery DNS Arayüzü (TCP)
+      - "${DISCOVERY_SERVICE_DNS_PORT:-8600}:8600/udp" # Discovery DNS Arayüzü (UDP)
+    networks:
+      sentiric-net:
+        ipv4_address: ${DISCOVERY_SERVICE_IPV4_ADDRESS}
+    command: >
+      agent -server -bootstrap-expect=3 -ui 
+      -node=${ZONE_B_HOSTNAME} 
+      -advertise='${ZONE_B_BACKBONE_IP}' 
+      -retry-join='${ZONE_A_BACKBONE_IP}' 
+      -retry-join='${ZONE_C_BACKBONE_IP}'       
+      -datacenter=${DATACENTER_NAME} 
+      -client=0.0.0.0 
+      -bind=0.0.0.0 
+      -disable-host-node-id 
+      -config-dir=/consul/config
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+          cpus: '0.25'
+    restart: always
+    healthcheck:
+      # Healthcheck'i, sunucunun kendi sağlığını kontrol eden ve daha hızlı yanıt veren
+      # /v1/status/peers endpoint'ine yapıyoruz. Bu, lider seçilmeden önce de çalışır.
+      test: [ "CMD", "sh", "-c", "curl -sf http://127.0.0.1:8500/v1/status/peers | jq -e '. | length > 0'" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # [capability-telephony]: Yetenek Servisleri (Capability Layer)
+  # --------------------------------------------------    
+  sip-signaling:
+    build: { context: services/sip-signaling }
+    env_file: [ "${ENV_FILE_PATH}" ]
+    ports:
+      - "${SIP_SIGNALING_HTTP_PORT:-13020}:${SIP_SIGNALING_HTTP_PORT:-13020}"
+      - "${SIP_SIGNALING_GRPC_PORT:-13021}:${SIP_SIGNALING_GRPC_PORT:-13021}"
+      - "${SIP_SIGNALING_METRICS_PORT:-13022}:${SIP_SIGNALING_METRICS_PORT:-13022}"
+      - "${SIP_SIGNALING_WS_PORT:-13023}:${SIP_SIGNALING_WS_PORT:-13023}"
+      - "${SIP_SIGNALING_UDP_PORT:-13024}:${SIP_SIGNALING_UDP_PORT:-13024}/udp"
+    networks:
+      sentiric-net:
+        ipv4_address: ${SIP_SIGNALING_IPV4_ADDRESS}
+    restart: always
+    healthcheck:
+      test: [ "CMD", "sh", "-c", "curl -sf http://127.0.0.1:13020/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    depends_on:
+      discovery-service: { condition: service_healthy }

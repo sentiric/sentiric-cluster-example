@@ -2,11 +2,17 @@
   "service": {
     "name": "sip-gateway",
     "port": 5060,
-    "tags": ["gcp", "udp"],
+    "tags": [
+      "zone_a",
+      "capability",
+      "telephony",
+      "sip",
+      "realtime"
+    ],
     "checks": [
       {
         "name": "SIP Gateway HTTP Health Check",
-        "http": "http://sip-gateway:8080/health",
+        "http": "http://sip-gateway:13010/health",
         "method": "GET",
         "interval": "10s",
         "timeout": "5s"
