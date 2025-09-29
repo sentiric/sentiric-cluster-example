@@ -47,7 +47,9 @@ def start_udp_server(host, port):
                     logger.info(f"Processing SIP payload: '{sip_payload.strip()}' for original sender {original_sender_addr}")
                     
                     response_message = f"SIP/2.0 200 OK - Processed by {os.getenv('CURRENT_NODE_NAME', 'unknown-signaler')}".encode()
-                    sock.sendto(response_message, original_sender_addr)
+                    # Gateway'in bize paketi gönderdiği adrese cevabı geri yolluyoruz.
+                    # Gateway'in kendisi bu cevabı alıp orijinal göndericiye iletecek.
+                    sock.sendto(response_message, addr)
                 except ValueError as e:
                      logger.warning(f"Could not parse original sender address '{original_sender_str}': {e}")
             else:
