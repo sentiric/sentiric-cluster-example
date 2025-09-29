@@ -74,7 +74,7 @@ services:
       sentiric-net:
         ipv4_address: ${SIP_GATEWAY_IPV4_ADDRESS}
     dns:
-      - ${ZONE_A_BACKBONE_IP}
+      - ${DISCOVERY_SERVICE_IPV4_ADDRESS}
     dns_search:
       - ${DISCOVERY_DNS_SEARCH_DOMAIN}         
     restart: always
