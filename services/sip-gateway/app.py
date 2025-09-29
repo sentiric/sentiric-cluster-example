@@ -20,7 +20,7 @@ logger = logging.getLogger("SIP_GATEWAY")
 
 # --- .env dosyasından gelen yapılandırmayı oku ---
 SIP_GATEWAY_UDP_PORT = int(os.getenv("SIP_GATEWAY_UDP_PORT", 5060))
-SIP_GATEWAY_HTTP_PORT = int(os.getenv("SIP_GATEWAY_HTTP_PORT", 12010))
+SIP_GATEWAY_HTTP_PORT = int(os.getenv("SIP_GATEWAY_HTTP_PORT", 13010))
 SIP_SIGNALING_UDP_PORT = int(os.getenv("SIP_SIGNALING_UDP_PORT", 13024))
 DISCOVERY_SERVICE_HTTP_ADDRESS = os.getenv("DISCOVERY_SERVICE_HTTP_ADDRESS")
 DISCOVERY_METHOD = os.getenv("DISCOVERY_METHOD", "HTTP").upper()
