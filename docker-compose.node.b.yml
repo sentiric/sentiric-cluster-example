@@ -65,7 +65,7 @@ services:
   # [capability-telephony]: Yetenek Servisleri (Capability Layer)
   # --------------------------------------------------    
   sip-signaling:
-    image: ghcr.io/sentiric/sentiric-sip-core-service:latest
+    build: { context: services/sip-signaling }
     env_file: [ "${ENV_FILE_PATH}" ]   
     ports:
       - "${SIP_SIGNALING_HTTP_PORT:-13020}:${SIP_SIGNALING_HTTP_PORT:-13020}"
