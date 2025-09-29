@@ -35,7 +35,7 @@ services:
       sentiric-net:
         ipv4_address: ${DISCOVERY_SERVICE_IPV4_ADDRESS}
     command: >
-      agent -server -bootstrap-expect=3 -ui 
+      agent -server -bootstrap-expect=1 -ui 
       -node=${ZONE_B_HOSTNAME} 
       -advertise='${ZONE_B_BACKBONE_IP}' 
       -retry-join='${ZONE_A_BACKBONE_IP}' 
