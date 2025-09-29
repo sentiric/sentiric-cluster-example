@@ -30,8 +30,8 @@ services:
       - "${DISCOVERY_SERVICE_WAN_PORT:-8302}:${DISCOVERY_SERVICE_WAN_PORT:-8302}/tcp" # Veri merkezleri arası Sunucu iletişimi (Gossip - WAN) (TCP)
       - "${DISCOVERY_SERVICE_WAN_PORT:-8302}:${DISCOVERY_SERVICE_WAN_PORT:-8302}/udp" # Veri merkezleri arası Sunucu iletişimi (Gossip - WAN) (UDP)
       - "${DISCOVERY_SERVICE_HTTP_PORT:-8500}:8500" # Discovery UI & HTTP API
-      - "${DISCOVERY_SERVICE_DNS_PORT:-8600}:8600/tcp" # Discovery DNS Arayüzü (TCP)
-      - "${DISCOVERY_SERVICE_DNS_PORT:-8600}:8600/udp" # Discovery DNS Arayüzü (UDP)
+      - "${DISCOVERY_SERVICE_DNS_PORT:-8600}:53/tcp" # ✅ KRİTİK Discovery DNS Arayüzü (TCP)
+      - "${DISCOVERY_SERVICE_DNS_PORT:-8600}:53/udp" # ✅ KRİTİK Discovery DNS Arayüzü (UDP)
     networks:
       sentiric-net:
         ipv4_address: ${DISCOVERY_SERVICE_IPV4_ADDRESS}
@@ -47,6 +47,7 @@ services:
       -bind=0.0.0.0 
       -disable-host-node-id 
       -config-dir=/consul/config
+      -dns-port=53
     deploy:
       resources:
         limits:
@@ -82,5 +83,5 @@ services:
       timeout: 10s
       retries: 3
       start_period: 20s
-    # depends_on: # sip-signaling servisinin başlamak için discovery-service'in "healthy" olmasını beklemesine gerek yoktur
-    #   discovery-service: { condition: service_healthy }
+    depends_on: # sip-signaling servisinin başlamak için discovery-service'in "healthy" olmasını beklemesine gerek yoktur
+      discovery-service: { condition: service_healthy }
