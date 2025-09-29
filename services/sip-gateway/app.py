@@ -1,4 +1,3 @@
-# DEĞİŞTİ: Kod, Docker ağında çalışacak ve yapılandırmayı ortam değişkenlerinden alacak şekilde güncellendi.
 import socket
 import os
 import requests
@@ -7,11 +6,17 @@ import time
 import logging
 from flask import Flask, jsonify
 
+# Flask'in kendi loglarını ve HTTP istek loglarını sessize al
+log = logging.getLogger('werkzeug')
+log.setLevel(logging.ERROR)
+
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger("SIP_GATEWAY")
 
+# ... (dosyanın geri kalanı öncekiyle aynı, sadece en üste log sessize alma eklendi) ...
+
 GATEWAY_UDP_PORT = int(os.getenv("GW_UDP_PORT", 5060))
-GATEWAY_API_PORT = int(os.getenv("GW_API_PORT", 5061))
+GATEWAY_API_PORT = int(os.getenv("GW_API_PORT", 8080))
 CONSUL_URL = os.getenv("CONSUL_HTTP_ADDR", "http://127.0.0.1:8500")
 
 latency_data = {}
@@ -53,7 +58,7 @@ def latency_prober():
                 message = b"LATENCY_PROBE"
                 start_time = time.monotonic()
                 probe_sock.sendto(message, (host, port))
-                probe_sock.recvfrom(1024) # Beklenen cevap "PROBE_ACK"
+                probe_sock.recvfrom(1024)
                 end_time = time.monotonic()
                 rtt = (end_time - start_time) * 1000
                 
@@ -103,11 +108,8 @@ def get_targets():
         data_copy = dict(latency_data)
     return jsonify({"available_targets": data_copy})
 
-# NİHAİ DÜZELTME: sip-gateway için de bir health check endpoint'i ekliyoruz.
 @app.route('/health')
 def health_check():
-    # Gelecekte buraya daha karmaşık kontroller eklenebilir.
-    # Örneğin: Consul'e erişilebiliyor mu? UDP portu dinleniyor mu?
     return jsonify({"status": "healthy"}), 200
 
 if __name__ == '__main__':

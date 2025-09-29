@@ -30,11 +30,12 @@ services:
       -retry-join='${NODE_C_IP}'
       -config-dir=/consul/config
     healthcheck:
-      # Healthcheck'i daha güvenilir olan `status/leader` endpoint'ine yapıyoruz.
-      test: ["CMD", "curl", "-f", "http://127.0.0.1:8500/v1/status/leader"]
+      # Healthcheck'i, sunucunun kendi sağlığını kontrol eden ve daha hızlı yanıt veren
+      # /v1/status/peers endpoint'ine yapıyoruz. Bu, lider seçilmeden önce de çalışır.
+      test: ["CMD", "sh", "-c", "curl -sf http://127.0.0.1:8500/v1/status/peers | jq -e '. | length > 0'"]
       interval: 10s
       timeout: 5s
-      retries: 10 # İlk başlangıç için retries sayısını artırmak iyi bir fikirdir.
+      retries: 10
 
   sip-gateway:
     build:
@@ -44,10 +45,10 @@ services:
       - sentiric_net
     ports:
       - "5060:5060/udp"
-      - "5061:5061/tcp"
+      - "8080:8080/tcp"
     environment:
       - GW_UDP_PORT=5060
-      - GW_API_PORT=5061
+      - GW_API_PORT=8080
       - CONSUL_HTTP_ADDR=http://consul-server:8500
     depends_on:
       consul-server:

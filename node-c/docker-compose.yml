@@ -30,11 +30,12 @@ services:
       -retry-join='${NODE_B_IP}'
       -config-dir=/consul/config
     healthcheck:
-      # Healthcheck'i daha güvenilir olan `status/leader` endpoint'ine yapıyoruz.
-      test: ["CMD", "curl", "-f", "http://127.0.0.1:8500/v1/status/leader"]
+      # Healthcheck'i, sunucunun kendi sağlığını kontrol eden ve daha hızlı yanıt veren
+      # /v1/status/peers endpoint'ine yapıyoruz. Bu, lider seçilmeden önce de çalışır.
+      test: ["CMD", "sh", "-c", "curl -sf http://127.0.0.1:8500/v1/status/peers | jq -e '. | length > 0'"]
       interval: 10s
       timeout: 5s
-      retries: 10 # İlk başlangıç için retries sayısını artırmak iyi bir fikirdir.
+      retries: 10
 
   sip-signaling:
     build:

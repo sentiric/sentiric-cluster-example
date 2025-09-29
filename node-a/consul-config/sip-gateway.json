@@ -6,7 +6,7 @@
     "checks": [
       {
         "name": "SIP Gateway HTTP Health Check",
-        "http": "http://sip-gateway:5061/health",
+        "http": "http://sip-gateway:8080/health",
         "method": "GET",
         "interval": "10s",
         "timeout": "5s"
