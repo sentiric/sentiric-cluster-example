@@ -1,5 +1,9 @@
-# DEĞİŞTİ: Gereksiz Flask kurulumu kaldırıldı.
 FROM python:3.9-slim
 WORKDIR /app
+
+# NİHAİ DÜZELTME: Flask kütüphanesini kurmak için requirements.txt ekliyoruz.
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
 COPY app.py .
 CMD ["python", "app.py"]

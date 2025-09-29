@@ -10,7 +10,6 @@ from flask import Flask, jsonify
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger("SIP_GATEWAY")
 
-# YENİ: Yapılandırmayı ortam değişkenlerinden alıyoruz.
 GATEWAY_UDP_PORT = int(os.getenv("GW_UDP_PORT", 5060))
 GATEWAY_API_PORT = int(os.getenv("GW_API_PORT", 5061))
 CONSUL_URL = os.getenv("CONSUL_HTTP_ADDR", "http://127.0.0.1:8500")
@@ -21,15 +20,12 @@ latency_lock = threading.Lock()
 def find_signaling_nodes():
     nodes = {}
     try:
-        # DEĞİŞTİ: Consul'e artık localhost yerine servis adıyla erişiyoruz.
         service_url = f"{CONSUL_URL}/v1/health/service/sip-signaling?passing"
         response = requests.get(service_url, timeout=2)
         response.raise_for_status()
         
         for instance in response.json():
             node_name = instance['Node']['Node']
-            # DEĞİŞTİ: Servis adresi, Consul'deki 'Address' alanından alınmalı.
-            # Eğer 'Address' boşsa, 'Node' adresini kullan. Bu daha sağlam bir yöntem.
             addr = instance['Service']['Address'] or instance['Node']['Address']
             port = instance['Service']['Port']
             nodes[node_name] = (addr, port)
@@ -63,7 +59,7 @@ def latency_prober():
                 
                 with latency_lock:
                     latency_data[node_name] = {'rtt': rtt, 'addr': (host, port), 'last_seen': time.time()}
-                logger.info(f"Latency to {node_name} ({host}:{port}): {rtt:.2f} ms")
+                logger.debug(f"Latency to {node_name} ({host}:{port}): {rtt:.2f} ms")
             except socket.timeout:
                 logger.warning(f"Latency probe to {node_name} ({host}:{port}) timed out.")
                 with latency_lock:
@@ -94,7 +90,6 @@ def start_gateway_server(host, port):
             
             logger.info(f"Forwarding to fastest node '{fastest_node}' at {chosen_target}")
             
-            # Orijinal gönderici bilgisini paketin başına ekle
             forward_data = f"{addr[0]}:{addr[1]}|".encode() + data
             server_sock.sendto(forward_data, chosen_target)
         except Exception as e:
@@ -105,9 +100,15 @@ app = Flask(__name__)
 @app.route('/targets')
 def get_targets():
     with latency_lock:
-        # JSON'a dönüştürmeden önce kopyasını alalım
         data_copy = dict(latency_data)
     return jsonify({"available_targets": data_copy})
+
+# NİHAİ DÜZELTME: sip-gateway için de bir health check endpoint'i ekliyoruz.
+@app.route('/health')
+def health_check():
+    # Gelecekte buraya daha karmaşık kontroller eklenebilir.
+    # Örneğin: Consul'e erişilebiliyor mu? UDP portu dinleniyor mu?
+    return jsonify({"status": "healthy"}), 200
 
 if __name__ == '__main__':
     prober_thread = threading.Thread(target=latency_prober, daemon=True)

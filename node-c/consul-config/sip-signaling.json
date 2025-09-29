@@ -5,8 +5,9 @@
     "tags": ["onprem", "core", "udp"],
     "checks": [
       {
-        "name": "SIP Signaling UDP Port Check",
-        "args": ["/bin/sh", "-c", "echo 'HEALTH' | nc -u -w 2 sip-signaling 13024"],
+        "name": "SIP Signaling HTTP Health Check",
+        "http": "http://sip-signaling:8080/health",
+        "method": "GET",
         "interval": "10s",
         "timeout": "5s"
       }

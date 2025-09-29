@@ -5,8 +5,9 @@
     "tags": ["gcp", "udp"],
     "checks": [
       {
-        "name": "SIP Gateway UDP Port Check",
-        "args": ["/bin/sh", "-c", "echo 'HEALTH' | nc -u -w 2 sip-gateway 5060"],
+        "name": "SIP Gateway HTTP Health Check",
+        "http": "http://sip-gateway:5061/health",
+        "method": "GET",
         "interval": "10s",
         "timeout": "5s"
       }
