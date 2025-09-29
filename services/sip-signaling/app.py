@@ -4,18 +4,17 @@ import os
 import threading
 from flask import Flask, jsonify
 
-# Flask'in kendi loglarını ve HTTP istek loglarını sessize al
+# NİHAİ DÜZELTME: Flask loglarını tamamen sustur
+app = Flask(__name__)
 log = logging.getLogger('werkzeug')
-log.setLevel(logging.ERROR)
+log.disabled = True
+app.logger.disabled = True
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger("SIP_SIGNALING")
 
 SIGNALING_PORT = int(os.getenv("SIGNAL_UDP_PORT", 13024))
 HEALTH_PORT = int(os.getenv("HEALTH_API_PORT", 8080))
-
-# ... (dosyanın geri kalanı öncekiyle aynı) ...
-# Bu dosyada başka değişiklik yok, sadece log sessize alma kodunun en üstte olduğundan emin oluyoruz.
 
 def start_udp_server(host, port):
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -56,8 +55,6 @@ def start_udp_server(host, port):
 
         except Exception as e:
             logger.error(f"Error in signaling UDP loop: {e}")
-
-app = Flask(__name__)
 
 @app.route('/health')
 def health_check():

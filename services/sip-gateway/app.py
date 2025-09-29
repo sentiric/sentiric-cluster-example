@@ -6,14 +6,14 @@ import time
 import logging
 from flask import Flask, jsonify
 
-# Flask'in kendi loglarını ve HTTP istek loglarını sessize al
+# NİHAİ DÜZELTME: Flask loglarını tamamen sustur
+app = Flask(__name__)
 log = logging.getLogger('werkzeug')
-log.setLevel(logging.ERROR)
+log.disabled = True
+app.logger.disabled = True
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger("SIP_GATEWAY")
-
-# ... (dosyanın geri kalanı öncekiyle aynı, sadece en üste log sessize alma eklendi) ...
 
 GATEWAY_UDP_PORT = int(os.getenv("GW_UDP_PORT", 5060))
 GATEWAY_API_PORT = int(os.getenv("GW_API_PORT", 8080))
@@ -100,8 +100,6 @@ def start_gateway_server(host, port):
         except Exception as e:
             logger.error(f"Error in gateway UDP loop: {e}")
 
-app = Flask(__name__)
-
 @app.route('/targets')
 def get_targets():
     with latency_lock:
@@ -120,4 +118,4 @@ if __name__ == '__main__':
     gateway_thread.start()
 
     logger.info(f"Starting Flask API server on port {GATEWAY_API_PORT}")
-    app.run(host='0.0.0.0', port=GATEWAY_API_PORT, debug=False)
+    app.run(host='0.0.0.0', port=GATEWAY_API_PORT)
