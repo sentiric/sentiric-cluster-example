@@ -1,4 +1,4 @@
-# Sentiric Cluster: Dağıtık ve Yüksek Erişilebilir SIP Yönlendirme Platformu
+# Sentiric Cluster: Dağıtık ve Yüksek Erişilebilir SIP Yönlendirme Platformu v0.0.1
 
 Bu proje, **HashiCorp Consul** ile servis keşfi ve **dinamik latency tabanlı yönlendirme** konularını bir araya getirerek, coğrafi olarak dağıtık bir SIP altyapısının nasıl kurulacağını gösteren profesyonel bir referans uygulamasıdır.
 
