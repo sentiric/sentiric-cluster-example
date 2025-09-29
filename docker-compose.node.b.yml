@@ -66,18 +66,13 @@ services:
   # --------------------------------------------------    
   sip-signaling:
     image: ghcr.io/sentiric/sentiric-sip-core-service:latest
-    env_file: [ "${ENV_FILE_PATH}" ] 
-    environment:
-      # sip-core-service özel Tanımlar
-      SIP_PORT: "${SIP_SIGNALING_UDP_PORT:-13024}"
-      SERVER_IP: "${SIP_SIGNALING_IPV4_ADDRESS}"
+    env_file: [ "${ENV_FILE_PATH}" ]   
     ports:
       - "${SIP_SIGNALING_HTTP_PORT:-13020}:${SIP_SIGNALING_HTTP_PORT:-13020}"
       - "${SIP_SIGNALING_GRPC_PORT:-13021}:${SIP_SIGNALING_GRPC_PORT:-13021}"
       - "${SIP_SIGNALING_METRICS_PORT:-13022}:${SIP_SIGNALING_METRICS_PORT:-13022}"
       - "${SIP_SIGNALING_WS_PORT:-13023}:${SIP_SIGNALING_WS_PORT:-13023}"
       - "${SIP_SIGNALING_UDP_PORT:-13024}:${SIP_SIGNALING_UDP_PORT:-13024}/udp"
-
     networks:
       sentiric-net:
         ipv4_address: ${SIP_SIGNALING_IPV4_ADDRESS}
