@@ -18,7 +18,7 @@ volumes:
 services:
   discovery-service:
     image: ghcr.io/sentiric/sentiric-discovery:latest
-
+    env_file: [ "${ENV_FILE_PATH}" ]    
     volumes:
       - discovery_data:/consul/data
       - ./discovery/config/zone_a:/consul/config
@@ -41,7 +41,8 @@ services:
       -advertise='${ZONE_A_BACKBONE_IP}' 
       -retry-join='${ZONE_B_BACKBONE_IP}' 
       -retry-join='${ZONE_C_BACKBONE_IP}'       
-      -datacenter=${DATACENTER_NAME} 
+      -datacenter=${DISCOVERY_DATACENTER_NAME}
+      -domain=${DISCOVERY_DOMAIN} 
       -client=0.0.0.0 
       -bind=0.0.0.0 
       -disable-host-node-id 
@@ -64,7 +65,7 @@ services:
   # --------------------------------------------------
   sip-gateway:
     build: { context: services/sip-gateway }
-    env_file: [ "${ENV_FILE_PATH}" ]
+    env_file: [ "${ENV_FILE_PATH}" ]         
     ports:
       - "${SIP_GATEWAY_HTTP_PORT:-13010}:${SIP_GATEWAY_HTTP_PORT:-13010}"
       - "${SIP_GATEWAY_METRICS_PORT:-13012}:${SIP_GATEWAY_METRICS_PORT:-13012}"
@@ -72,6 +73,10 @@ services:
     networks:
       sentiric-net:
         ipv4_address: ${SIP_GATEWAY_IPV4_ADDRESS}
+    dns:
+      - ${DISCOVERY_SERVICE_IPV4_ADDRESS}
+    dns_search:
+      - ${DISCOVERY_DNS_SEARCH_DOMAIN}         
     restart: always
     healthcheck:
       test: [ "CMD", "sh", "-c", "curl -sf http://127.0.0.1:13010/health" ]
