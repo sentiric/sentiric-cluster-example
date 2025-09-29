@@ -35,12 +35,22 @@ services:
     networks:
       sentiric-net:
         ipv4_address: ${DISCOVERY_SERVICE_IPV4_ADDRESS}
+    # ⛓️ Consul Cluster başlatmak için örnek komut:
+    #
+    # agent -server -bootstrap-expect=3 -ui
+    # -retry-join='${ZONE_B_BACKBONE_IP}'
+    # -retry-join='${ZONE_C_BACKBONE_IP}'
+    #
+    # 🟢 A node (Bootstrapper)
+    # Cluster'ı başlatan ilk node'dur.
+    # Diğer node'lar bu node'a bağlanarak kümeye katılır.
+    #
+    # ⚠️ Not: Cluster'ı **tek başına** başlatmak için `-bootstrap-expect=1` kullanılmalıdır.
+    #        Üçlü bir yapı kurulacaksa `-bootstrap-expect=3` kullanılmalıdır.
     command: >
-      agent -server -bootstrap-expect=3 -ui 
+      agent -server -bootstrap-expect=1 -ui 
       -node=${ZONE_A_HOSTNAME} 
-      -advertise='${ZONE_A_BACKBONE_IP}' 
-      -retry-join='${ZONE_B_BACKBONE_IP}' 
-      -retry-join='${ZONE_C_BACKBONE_IP}'       
+      -advertise='${ZONE_A_BACKBONE_IP}'      
       -datacenter=${DISCOVERY_DATACENTER_NAME}
       -domain=${DISCOVERY_DOMAIN} 
       -client=0.0.0.0 

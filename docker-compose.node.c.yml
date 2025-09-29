@@ -35,12 +35,25 @@ services:
     networks:
       sentiric-net:
         ipv4_address: ${DISCOVERY_SERVICE_IPV4_ADDRESS}
+    # ⛓️ Consul Cluster başlatmak için örnek komut:
+    #
+    #     agent -server -bootstrap-expect=3 -ui   
+    #     -retry-join='${ZONE_A_BACKBONE_IP}' 
+    #     -retry-join='${ZONE_B_BACKBONE_IP}'
+    #                  
+    # ⛓️ Cluster'a client olarak katılmak için örnek komut:
+    #
+    # agent -ui
+    # -retry-join='${DISCOVERY_SERVICE_JOIN_ADDRESS}'
+    #
+    # 🔵 C node (Client agent)
+    # A node'una bağlanarak cluster'a katılır.
+    # Bu node **yalnızca istemci (client)** olarak görev yapar.
     command: >
-      agent -server -bootstrap-expect=3 -ui  
+      agent -ui 
       -node=${ZONE_C_HOSTNAME}  
-      -advertise='${ZONE_C_BACKBONE_IP}'  
-      -retry-join='${ZONE_A_BACKBONE_IP}'  
-      -retry-join='${ZONE_B_BACKBONE_IP}'        
+      -advertise='${ZONE_C_BACKBONE_IP}'
+      -retry-join='${DISCOVERY_SERVICE_JOIN_ADDRESS}'  
       -datacenter=${DISCOVERY_DATACENTER_NAME}
       -domain=${DISCOVERY_DOMAIN}
       -client=0.0.0.0  
